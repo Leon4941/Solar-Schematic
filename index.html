@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -158,7 +157,7 @@
 
         const computeSolarMetrics = (billAmount, afaRate = 0) => {
             const estimatedUsage = calculateKWhFromBill(billAmount, afaRate);
-            const originalBillData = calculateBill(estimatedUsage, afaRate);
+            const originalBill = calculateBill(estimatedUsage, afaRate);
             
             const monthlyKWhPerPanel = (PANEL_WATTAGE * PEAK_SUN_HOURS * 30) / 1000;
             const panelCount = Math.max(0, Math.ceil(estimatedUsage / monthlyKWhPerPanel));
@@ -168,17 +167,17 @@
             const rawSolarExport = Math.max(0, solarGeneration - morningUsage);
             const nightUsage = Math.max(0, estimatedUsage - morningUsage);
             
-            // Capping rule
+            // --- BURN LOGIC: CAPPING EXPORT AT IMPORT ---
             const effectiveExport = Math.min(rawSolarExport, nightUsage);
             const excessExport = Math.max(0, rawSolarExport - nightUsage);
             
+            // Financial formula: compare original bill vs bill(import) - capped credit(export)
+            const nightBillData = calculateBill(nightUsage, afaRate);
             const exportRate = nightUsage >= 1500 ? BASE_ENERGY_RATE + HIGH_USAGE_PENALTY : BASE_ENERGY_RATE;
             const exportValue = effectiveExport * exportRate;
             
-            const nightBillData = calculateBill(nightUsage, afaRate);
-            const netBill = nightBillData.totalBill - exportValue;
-            
-            const totalSaving = Math.max(0, originalBillData.totalBill - netBill);
+            const netBill = Math.max(MINIMUM_MONTHLY_CHARGE, nightBillData.totalBill - exportValue);
+            const totalSaving = Math.max(0, originalBill.totalBill - netBill);
 
             return {
                 billAmount,
@@ -257,7 +256,7 @@
                                     <rect width="70" height="50" fill="#1e293b" rx="2" />
                                     <rect x="5" y="5" width="60" height="35" fill="#334155" />
                                     <text x="35" y="65" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">TV</text>
-                                    <path d="M70 25 H 280 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                                    <path d="M70 25 H 290 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
                                 </g>
                             </g>
                             <g transform="translate(290, 150)">
@@ -354,7 +353,7 @@
                             <text x="15" y="42" className="text-lg font-black fill-orange-600">
                                 {formatKWh(data.exportedToGrid)}
                                 {data.excessSolarExport > 0 && (
-                                   <tspan dx="5" className="text-[10px] font-bold fill-red-500">(+{formatKWh(data.excessSolarExport)} excess)</tspan>
+                                   <tspan dx="5" className="text-[10px] font-bold fill-red-500">(+{formatKWh(data.excessSolarExport)} burned)</tspan>
                                 )}
                             </text>
                         </g>

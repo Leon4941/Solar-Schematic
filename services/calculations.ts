@@ -1,4 +1,3 @@
-
 import { 
   BASE_ENERGY_RATE, HIGH_USAGE_PENALTY, CAPACITY_RATE, NETWORK_RATE,
   RETAIL_THRESHOLD, RETAIL_CHARGE_AMOUNT, SST_THRESHOLD_KWH, 
@@ -84,7 +83,7 @@ export const calculateKWhFromBill = (targetBill: number, afaRate: number = 0): n
 
 export const computeSolarMetrics = (billAmount: number, afaRate: number = 0): SolarData => {
   const estimatedUsage = calculateKWhFromBill(billAmount, afaRate);
-  const originalBillData = calculateBill(estimatedUsage, afaRate);
+  const originalBill = calculateBill(estimatedUsage, afaRate);
   
   const monthlyKWhPerPanel = (PANEL_WATTAGE * PEAK_SUN_HOURS * 30) / 1000;
   const panelCount = Math.max(0, Math.ceil(estimatedUsage / monthlyKWhPerPanel));
@@ -94,17 +93,27 @@ export const computeSolarMetrics = (billAmount: number, afaRate: number = 0): So
   const rawSolarExport = Math.max(0, solarGeneration - morningUsage);
   const nightUsage = Math.max(0, estimatedUsage - morningUsage);
   
-  // Requirement: Exported to Grid capped at Import from Grid
+  // --- BURN LOGIC: CAPPING EXPORT AT IMPORT ---
+  // Exported to Grid cannot exceed Imported from Grid (nightUsage)
   const effectiveExport = Math.min(rawSolarExport, nightUsage);
-  const excessExport = Math.max(0, rawSolarExport - nightUsage);
+  const excessSolarExport = Math.max(0, rawSolarExport - nightUsage);
   
+  // --- FINANCIAL CALCULATIONS BASED ON REFERENCE CODE ---
+  
+  // 1. Export Rate based on Night Usage blocks
   const exportRate = nightUsage >= 1500 ? BASE_ENERGY_RATE + HIGH_USAGE_PENALTY : BASE_ENERGY_RATE;
+  
+  // 2. Export Credit Value (Effective Export only)
   const exportValue = effectiveExport * exportRate;
   
+  // 3. New Bill for Night Import energy
   const nightBillData = calculateBill(nightUsage, afaRate);
-  const netBill = nightBillData.totalBill - exportValue;
   
-  const totalSaving = Math.max(0, originalBillData.totalBill - netBill);
+  // 4. Net Bill (Import Bill minus Export Credit)
+  const netBill = Math.max(MINIMUM_MONTHLY_CHARGE, nightBillData.totalBill - exportValue);
+  
+  // 5. Total Saving = Original Bill - Net Bill
+  const totalSaving = Math.max(0, originalBill.totalBill - netBill);
 
   return {
     billAmount,
@@ -113,7 +122,7 @@ export const computeSolarMetrics = (billAmount: number, afaRate: number = 0): So
     solarGeneration,
     morningUsage,
     exportedToGrid: effectiveExport,
-    excessSolarExport: excessExport,
+    excessSolarExport,
     importedFromGrid: nightUsage,
     systemSize: (panelCount * PANEL_WATTAGE) / 1000,
     panelCount,

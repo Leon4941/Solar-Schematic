@@ -84,7 +84,7 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
               <rect width="70" height="50" fill="#1e293b" rx="2" />
               <rect x="5" y="5" width="60" height="35" fill="#334155" />
               <text x="35" y="65" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">TV</text>
-              <path d="M70 25 H 280 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+              <path d="M70 25 H 290 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
             </g>
           </g>
 
@@ -188,7 +188,7 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
           <text x="15" y="42" className="text-lg font-black fill-orange-600">
             {formatKWh(data.exportedToGrid)}
             {data.excessSolarExport > 0 && (
-               <tspan dx="5" className="text-[10px] font-bold fill-red-500">(+{formatKWh(data.excessSolarExport)} excess)</tspan>
+               <tspan dx="5" className="text-[10px] font-bold fill-red-500">(+{formatKWh(data.excessSolarExport)} burned)</tspan>
             )}
           </text>
         </g>
