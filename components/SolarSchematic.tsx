@@ -78,13 +78,13 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
               <rect width="100" height="35" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1" rx="4" />
               <line x1="10" y1="25" x2="90" y2="25" stroke="#cbd5e1" />
               <text x="50" y="55" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">Aircon</text>
-              <path d="M100 17 H 270 V 100" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+              <path d="M100 17 H 280 V 140" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
             </g>
             <g transform="translate(10, 130)">
               <rect width="70" height="50" fill="#1e293b" rx="2" />
               <rect x="5" y="5" width="60" height="35" fill="#334155" />
               <text x="35" y="65" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">TV</text>
-              <path d="M70 25 H 270 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+              <path d="M70 25 H 280 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
             </g>
           </g>
 
@@ -144,7 +144,6 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
         <g transform={`translate(${gridX}, 350)`}>
           <line x1="0" y1="0" x2="0" y2="230" stroke="#334155" strokeWidth="8" />
           <line x1="-40" y1="40" x2="40" y2="40" stroke="#334155" strokeWidth="6" />
-          {/* Adjusted Y coordinate for TNB GRID text to be clearly visible above the legend bar */}
           <text x="0" y="240" textAnchor="middle" className="text-[11px] font-black fill-slate-800 uppercase tracking-tighter">TNB GRID</text>
         </g>
 
@@ -186,7 +185,12 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
         <g transform={`translate(${meterX + 20}, ${exportY - 80})`}>
           <rect width="180" height="55" rx="12" fill="#fff7ed" stroke="#f97316" strokeWidth="3" />
           <text x="15" y="18" className="text-[9px] font-black fill-slate-500 uppercase tracking-tighter">E: Exported to Grid</text>
-          <text x="15" y="42" className="text-lg font-black fill-orange-600">{formatKWh(data.exportedToGrid)}</text>
+          <text x="15" y="42" className="text-lg font-black fill-orange-600">
+            {formatKWh(data.exportedToGrid)}
+            {data.excessSolarExport > 0 && (
+               <tspan dx="5" className="text-[10px] font-bold fill-red-500">(+{formatKWh(data.excessSolarExport)} excess)</tspan>
+            )}
+          </text>
         </g>
         <g transform={`translate(${meterX + 20}, ${importY + 20})`}>
           <rect width="180" height="55" rx="12" fill="#eff6ff" stroke="#3b82f6" strokeWidth="3" />
@@ -213,7 +217,7 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
               <text x="15" y="4" className="text-[9px] font-black uppercase tracking-widest" fill="white">Grid Import</text>
            </g>
            <g transform="translate(850, 22)">
-              <text x="0" y="4" className="text-[8px] font-black uppercase tracking-widest fill-blue-400">TECHNICAL ENGINE v3.5</text>
+              <text x="0" y="4" className="text-[8px] font-black uppercase tracking-widest fill-blue-400">TECHNICAL ENGINE v7.0</text>
            </g>
         </g>
       </svg>

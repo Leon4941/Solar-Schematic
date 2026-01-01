@@ -33,9 +33,6 @@ const calculateEEI = (kWh: number): number => {
     return -(kWh * rate);
 };
 
-/**
- * Bill calculation matching the reference snippet's flat-rate plus penalty model
- */
 export const calculateBill = (kWh: number, afaRate: number = 0): CalculationResult => {
     const effectiveUsageRate = kWh > 1500 ? BASE_ENERGY_RATE + HIGH_USAGE_PENALTY : BASE_ENERGY_RATE;
     const usageCost = kWh * effectiveUsageRate;
@@ -93,14 +90,16 @@ export const computeSolarMetrics = (billAmount: number, afaRate: number = 0): So
   const panelCount = Math.max(0, Math.ceil(estimatedUsage / monthlyKWhPerPanel));
   const solarGeneration = panelCount * monthlyKWhPerPanel;
   
-  // Specific analysis logic from the reference snippet
   const morningUsage = estimatedUsage * MORNING_USAGE_PERCENT;
-  const solarExport = Math.max(0, solarGeneration - morningUsage);
+  const rawSolarExport = Math.max(0, solarGeneration - morningUsage);
   const nightUsage = Math.max(0, estimatedUsage - morningUsage);
   
-  // exportRate logic from snippet
+  // Requirement: Exported to Grid capped at Import from Grid
+  const effectiveExport = Math.min(rawSolarExport, nightUsage);
+  const excessExport = Math.max(0, rawSolarExport - nightUsage);
+  
   const exportRate = nightUsage >= 1500 ? BASE_ENERGY_RATE + HIGH_USAGE_PENALTY : BASE_ENERGY_RATE;
-  const exportValue = solarExport * exportRate;
+  const exportValue = effectiveExport * exportRate;
   
   const nightBillData = calculateBill(nightUsage, afaRate);
   const netBill = nightBillData.totalBill - exportValue;
@@ -113,7 +112,8 @@ export const computeSolarMetrics = (billAmount: number, afaRate: number = 0): So
     estimatedUsage,
     solarGeneration,
     morningUsage,
-    exportedToGrid: solarExport,
+    exportedToGrid: effectiveExport,
+    excessSolarExport: excessExport,
     importedFromGrid: nightUsage,
     systemSize: (panelCount * PANEL_WATTAGE) / 1000,
     panelCount,

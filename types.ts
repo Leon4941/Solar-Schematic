@@ -5,7 +5,8 @@ export interface SolarData {
   estimatedUsage: number; // B
   solarGeneration: number; // C
   morningUsage: number; // D
-  exportedToGrid: number; // E
+  exportedToGrid: number; // E (Effective Capped Value)
+  excessSolarExport: number; // Burned energy
   importedFromGrid: number; // F
   systemSize: number;
   panelCount: number;
