@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -347,15 +348,17 @@
                             <text x="15" y="20" className="text-[9px] font-black fill-slate-500 uppercase tracking-tighter">C: Solar Generation</text>
                             <text x="15" y="45" className="text-xl font-black fill-orange-600">{formatKWh(data.solarGeneration)}</text>
                         </g>
-                        <g transform={`translate(${meterX + 20}, ${exportY - 80})`}>
-                            <rect width="180" height="55" rx="12" fill="#fff7ed" stroke="#f97316" strokeWidth="3" />
+                        <g transform={`translate(${meterX + 20}, ${exportY - 90})`}>
+                            <rect width="180" height="75" rx="12" fill="#fff7ed" stroke="#f97316" strokeWidth="3" />
                             <text x="15" y="18" className="text-[9px] font-black fill-slate-500 uppercase tracking-tighter">E: Exported to Grid</text>
                             <text x="15" y="42" className="text-lg font-black fill-orange-600">
                                 {formatKWh(data.exportedToGrid)}
-                                {data.excessSolarExport > 0 && (
-                                   <tspan dx="5" className="text-[10px] font-bold fill-red-500">(+{formatKWh(data.excessSolarExport)} burned)</tspan>
-                                )}
                             </text>
+                            {data.excessSolarExport > 0 && (
+                               <text x="15" y="60" className="text-[10px] font-bold fill-red-500">
+                                  (+{formatKWh(data.excessSolarExport)} burned)
+                               </text>
+                            )}
                         </g>
                         <g transform={`translate(${meterX + 20}, ${importY + 20})`}>
                             <rect width="180" height="55" rx="12" fill="#eff6ff" stroke="#3b82f6" strokeWidth="3" />
