@@ -1,0 +1,5 @@
+{
+  "name": "Eternalgy Solar Schematic Simulator",
+  "description": "An interactive 3D technical schematic for visualizing solar energy distribution, including real-time flow animations and Malaysian TNB bill calculations.",
+  "requestFramePermissions": []
+}

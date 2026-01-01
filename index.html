@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternalgy Solar Schematic Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Energy Flow Animations */
+        @keyframes dash {
+            to { stroke-dashoffset: -40; }
+        }
+        
+        .animate-flow {
+            stroke-dasharray: 8, 8;
+            animation: dash 1.5s linear infinite;
+        }
+        
+        .animate-flow-reverse {
+            stroke-dasharray: 8, 8;
+            animation: dash 1.5s linear infinite reverse;
+        }
+
+        /* Clean Number Inputs */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-x-hidden">
+    <div id="root"></div>
+
+    <!-- Load React and Babel for standalone execution -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        // --- 1. CONSTANTS (from constants.ts) ---
+        const BASE_ENERGY_RATE = 0.2703;
+        const HIGH_USAGE_PENALTY = 0.10;
+        const CAPACITY_RATE = 0.0455;
+        const NETWORK_RATE = 0.1285;
+        const RETAIL_THRESHOLD = 600;
+        const RETAIL_CHARGE_AMOUNT = 10.00;
+        const SST_THRESHOLD_KWH = 600;
+        const SST_RATE = 0.08;
+        const KWTBB_RATE = 0.016;
+        const MINIMUM_MONTHLY_CHARGE = 3.00;
+
+        const PANEL_WATTAGE = 620;
+        const PEAK_SUN_HOURS = 3.4;
+        const MORNING_USAGE_PERCENT = 0.30;
+
+        // --- 2. CALCULATION ENGINE (from services/calculations.ts) ---
+        const getEEIRate = (kwh) => {
+            if (kwh <= 0) return 0;
+            if (kwh <= 200) return 0.250;
+            if (kwh <= 250) return 0.245;
+            if (kwh <= 300) return 0.225;
+            if (kwh <= 350) return 0.210;
+            if (kwh <= 400) return 0.170;
+            if (kwh <= 450) return 0.145;
+            if (kwh <= 500) return 0.120;
+            if (kwh <= 550) return 0.105;
+            if (kwh <= 600) return 0.090;
+            if (kwh <= 650) return 0.075;
+            if (kwh <= 700) return 0.055;
+            if (kwh <= 750) return 0.045;
+            if (kwh <= 800) return 0.040;
+            if (kwh <= 850) return 0.025;
+            if (kwh <= 900) return 0.010;
+            if (kwh <= 1000) return 0.005;
+            return 0;
+        };
+
+        const calculateEEI = (kWh) => {
+            const rate = getEEIRate(kWh);
+            return -(kWh * rate);
+        };
+
+        const calculateBill = (kWh, afaRate = 0) => {
+            const effectiveUsageRate = kWh > 1500 ? BASE_ENERGY_RATE + HIGH_USAGE_PENALTY : BASE_ENERGY_RATE;
+            const usageCost = kWh * effectiveUsageRate;
+            const capacityCost = kWh * CAPACITY_RATE;
+            const networkCost = kWh * NETWORK_RATE;
+            const afaCost = kWh * afaRate;
+            const retailCharge = kWh > RETAIL_THRESHOLD ? RETAIL_CHARGE_AMOUNT : 0;
+            const kwtbbBase = usageCost + capacityCost + networkCost;
+            const kwtbbCost = kwtbbBase * KWTBB_RATE;
+            
+            let sstCost = 0;
+            if (kWh > SST_THRESHOLD_KWH) {
+                const taxableKWh = kWh - SST_THRESHOLD_KWH;
+                const costPerUnit = effectiveUsageRate + CAPACITY_RATE + NETWORK_RATE + afaRate;
+                const taxableVariableCost = taxableKWh * costPerUnit;
+                const totalTaxableBase = taxableVariableCost + retailCharge;
+                sstCost = Math.max(0, totalTaxableBase * SST_RATE);
+            }
+            
+            const eeiCost = calculateEEI(kWh);
+            const totalBill = usageCost + capacityCost + networkCost + afaCost + retailCharge + kwtbbCost + sstCost + eeiCost;
+
+            return { 
+                totalBill, 
+                unitRate: effectiveUsageRate 
+            };
+        };
+
+        const calculateKWhFromBill = (targetBill, afaRate = 0) => {
+            if (!targetBill || targetBill <= MINIMUM_MONTHLY_CHARGE) return 0;
+            let low = 0, high = 100000, mid = 0;
+            for(let i = 0; i < 100; i++) {
+                mid = (low + high) / 2;
+                const res = calculateBill(mid, afaRate);
+                if (res.totalBill < targetBill) low = mid;
+                else high = mid;
+            }
+            return mid;
+        };
+
+        const computeSolarMetrics = (billAmount, afaRate = 0) => {
+            const estimatedUsage = calculateKWhFromBill(billAmount, afaRate);
+            const originalBillData = calculateBill(estimatedUsage, afaRate);
+            
+            const monthlyKWhPerPanel = (PANEL_WATTAGE * PEAK_SUN_HOURS * 30) / 1000;
+            const panelCount = Math.max(0, Math.ceil(estimatedUsage / monthlyKWhPerPanel));
+            const solarGeneration = panelCount * monthlyKWhPerPanel;
+            
+            const morningUsage = estimatedUsage * MORNING_USAGE_PERCENT;
+            const solarExport = Math.max(0, solarGeneration - morningUsage);
+            const nightUsage = Math.max(0, estimatedUsage - morningUsage);
+            
+            const exportRate = nightUsage >= 1500 ? BASE_ENERGY_RATE + HIGH_USAGE_PENALTY : BASE_ENERGY_RATE;
+            const exportValue = solarExport * exportRate;
+            
+            const nightBillData = calculateBill(nightUsage, afaRate);
+            const netBill = nightBillData.totalBill - exportValue;
+            
+            const totalSaving = Math.max(0, originalBillData.totalBill - netBill);
+
+            return {
+                billAmount,
+                afaRate,
+                estimatedUsage,
+                solarGeneration,
+                morningUsage,
+                exportedToGrid: solarExport,
+                importedFromGrid: nightUsage,
+                systemSize: (panelCount * PANEL_WATTAGE) / 1000,
+                panelCount,
+                totalSaving
+            };
+        };
+
+        const formatRM = (val) => new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(val);
+        const formatKWh = (val) => `${val.toFixed(2)} kWh`;
+
+        // --- 3. SCHEMATIC COMPONENT (from components/SolarSchematic.tsx) ---
+        const SolarSchematic = ({ data, onBillChange, onAfaChange }) => {
+            const isGenerating = data.solarGeneration > 0;
+            const isExporting = data.exportedToGrid > 0;
+            const isImporting = data.importedFromGrid > 0;
+
+            const exportY = 380;
+            const importY = 440;
+            const meterX = 660;
+            const gridX = 920;
+            const panelsX = 400;
+            const panelsY = 60;
+            const inverterX = 520;
+            const inverterY = 220;
+            const homeDbWallX = 370; 
+            const dbCenterY = 410; 
+            const sunX = 940;
+            const sunY = 50;
+
+            return (
+                <div className="relative w-full aspect-[16/10] md:aspect-[16/9] bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+                    <svg viewBox="0 0 1000 650" className="w-full h-full select-none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style={{ stopColor: '#f8fafc', stopOpacity: 1 }} />
+                                <stop offset="100%" style={{ stopColor: '#f1f5f9', stopOpacity: 1 }} />
+                            </linearGradient>
+                        </defs>
+                        <rect width="1000" height="650" fill="url(#skyGrad)" />
+                        <path d="M0 580 H 1000" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="10 5" />
+                        
+                        <g transform={`translate(${sunX}, ${sunY})`}>
+                            <circle r="40" fill="#fbbf24" className={isGenerating ? 'animate-pulse' : ''} />
+                            <g stroke="#fbbf24" strokeWidth="4" strokeLinecap="round">
+                                {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
+                                    <line key={deg} x1={Math.cos(deg * Math.PI / 180) * 50} y1={Math.sin(deg * Math.PI / 180) * 50} x2={Math.cos(deg * Math.PI / 180) * 75} y2={Math.sin(deg * Math.PI / 180) * 75} />
+                                ))}
+                            </g>
+                        </g>
+
+                        <g transform="translate(50, 210)">
+                            <rect width="320" height="340" fill="white" stroke="#334155" strokeWidth="4" rx="4" />
+                            <path d="M-20 0 L 160 -120 L 340 0" fill="white" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
+                            <g transform="translate(20, 20)">
+                                <rect width="280" height="60" rx="12" fill="#eff6ff" stroke="#3b82f6" strokeWidth="3" />
+                                <text x="15" y="25" className="text-xs font-black fill-slate-500 uppercase tracking-widest">D: Morning Usage (30%)</text>
+                                <text x="15" y="48" className="text-xl font-black fill-blue-700">{formatKWh(data.morningUsage)}</text>
+                            </g>
+                            <g transform="translate(20, 100)">
+                                <g transform="translate(10, 10)">
+                                    <rect width="100" height="35" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1" rx="4" />
+                                    <line x1="10" y1="25" x2="90" y2="25" stroke="#cbd5e1" />
+                                    <text x="50" y="55" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">Aircon</text>
+                                    <path d="M100 17 H 270 V 100" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                                </g>
+                                <g transform="translate(10, 130)">
+                                    <rect width="70" height="50" fill="#1e293b" rx="2" />
+                                    <rect x="5" y="5" width="60" height="35" fill="#334155" />
+                                    <text x="35" y="65" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">TV</text>
+                                    <path d="M70 25 H 270 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                                </g>
+                            </g>
+                            <g transform="translate(290, 150)">
+                                <rect width="30" height="100" rx="4" fill="#334155" />
+                                <rect x="5" y="10" width="20" height="80" fill="#1e293b" rx="2" />
+                                <text x="15" y="115" textAnchor="middle" className="text-[9px] font-black fill-slate-500 uppercase">DB</text>
+                                <circle cx="15" cy="20" r="2" fill="#22c55e" />
+                            </g>
+                        </g>
+
+                        <g transform={`translate(${panelsX}, ${panelsY})`}>
+                            <rect x="0" y="0" width="240" height="110" fill="#0f172a" stroke="#1e293b" strokeWidth="2" rx="2" transform="skewX(-15)" />
+                            <g stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" transform="skewX(-15)">
+                                {[20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220].map(x => <line key={`h-${x}`} x1={x} y1="0" x2={x} y2="110" />)}
+                            </g>
+                            <text x="120" y="-15" textAnchor="middle" className="text-sm font-black fill-slate-800 uppercase tracking-widest">Solar Panels</text>
+                        </g>
+
+                        <g transform={`translate(${inverterX}, ${inverterY})`}>
+                            <rect width="130" height="120" rx="10" fill="#f8fafc" stroke="#334155" strokeWidth="3" />
+                            <rect x="15" y="15" width="100" height="40" fill="#1e293b" rx="4" />
+                            <text x="65" y="40" textAnchor="middle" className="text-[10px] font-mono fill-green-400">STATUS: ON</text>
+                            <text x="65" y="100" textAnchor="middle" className="text-[11px] font-black fill-slate-800 uppercase tracking-widest">INVERTER</text>
+                        </g>
+
+                        <path d={`M${panelsX + 120} ${panelsY + 110} V ${inverterY}`} fill="none" stroke="#f97316" strokeWidth="6" />
+                        {isGenerating && <path d={`M${panelsX + 120} ${panelsY + 110} V ${inverterY}`} fill="none" stroke="white" strokeWidth="2" strokeDasharray="8 8" className="animate-flow" />}
+                        <g transform={`translate(${panelsX + 130}, ${inverterY - 30})`}>
+                            <rect x="0" y="-12" width="25" height="18" rx="4" fill="#f97316" />
+                            <text x="12.5" y="1" textAnchor="middle" className="text-[10px] font-black fill-white">DC</text>
+                        </g>
+
+                        <path d={`M${inverterX} ${inverterY + 60} H ${homeDbWallX + 50} V ${dbCenterY} H ${homeDbWallX}`} fill="none" stroke="#22c55e" strokeWidth="6" />
+                        {isGenerating && <path d={`M${inverterX} ${inverterY + 60} H ${homeDbWallX + 50} V ${dbCenterY} H ${homeDbWallX}`} fill="none" stroke="white" strokeWidth="2" strokeDasharray="8 8" className="animate-flow" />}
+                        <g transform={`translate(${inverterX - 60}, ${inverterY + 55})`}>
+                            <rect x="0" y="-12" width="25" height="18" rx="4" fill="#22c55e" />
+                            <text x="12.5" y="1" textAnchor="middle" className="text-[10px] font-black fill-white">AC</text>
+                        </g>
+
+                        <path d={`M${homeDbWallX} ${exportY} H ${meterX} H ${gridX}`} fill="none" stroke="#f59e0b" strokeWidth="6" opacity={isExporting ? 1 : 0.2} />
+                        {isExporting && <path d={`M${homeDbWallX} ${exportY} H ${meterX} H ${gridX}`} fill="none" stroke="white" strokeWidth="2" strokeDasharray="8 8" className="animate-flow" />}
+
+                        <path d={`M${gridX} ${importY} H ${meterX} H ${homeDbWallX}`} fill="none" stroke="#3b82f6" strokeWidth="6" opacity={isImporting ? 1 : 0.2} />
+                        {isImporting && <path d={`M${gridX} ${importY} H ${meterX} H ${homeDbWallX}`} fill="none" stroke="white" strokeDasharray="8 8" className="animate-flow" />}
+
+                        <g transform={`translate(${meterX - 40}, 360)`}>
+                            <rect width="80" height="100" rx="8" fill="#1e293b" />
+                            <rect x="10" y="10" width="60" height="30" fill="#ecfdf5" rx="2" />
+                            <text x="40" y="30" textAnchor="middle" className="text-[12px] font-mono fill-slate-900">000452.1</text>
+                            <text x="40" y="65" textAnchor="middle" className="text-[8px] font-black fill-white uppercase text-center">TNB Meter</text>
+                        </g>
+                        <g transform={`translate(${gridX}, 350)`}>
+                            <line x1="0" y1="0" x2="0" y2="230" stroke="#334155" strokeWidth="8" />
+                            <line x1="-40" y1="40" x2="40" y2="40" stroke="#334155" strokeWidth="6" />
+                            <text x="0" y="240" textAnchor="middle" className="text-[11px] font-black fill-slate-800 uppercase tracking-tighter">TNB GRID</text>
+                        </g>
+
+                        <foreignObject x="30" y="30" width="240" height="130">
+                            <div className="bg-slate-900 p-4 rounded-2xl shadow-xl border-2 border-blue-500">
+                                <div className="flex justify-between items-start mb-2">
+                                    <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest block">A: TNB Bill (MYR)</label>
+                                    <div className="flex flex-col items-end">
+                                        <label className="text-[8px] font-black text-orange-400 uppercase tracking-widest">AFA Rate</label>
+                                        <input 
+                                            type="number" 
+                                            step="0.0001"
+                                            value={data.afaRate}
+                                            onChange={(e) => onAfaChange(parseFloat(e.target.value) || 0)}
+                                            className="bg-transparent text-[11px] font-black text-white w-14 text-right focus:outline-none border-b border-orange-500/40 focus:border-orange-500 transition-colors"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl font-black text-white">RM</span>
+                                    <input 
+                                        type="number" 
+                                        value={data.billAmount}
+                                        onChange={(e) => onBillChange(parseFloat(e.target.value) || 0)}
+                                        className="bg-transparent text-3xl font-black text-white w-full focus:outline-none border-b-2 border-blue-500/30 focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                                <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-wider">B: Est. {formatKWh(data.estimatedUsage)} /mo</p>
+                            </div>
+                        </foreignObject>
+
+                        <g transform="translate(680, 25)">
+                            <rect width="200" height="60" rx="12" fill="#fffbeb" stroke="#f59e0b" strokeWidth="3" />
+                            <text x="15" y="20" className="text-[9px] font-black fill-slate-500 uppercase tracking-tighter">C: Solar Generation</text>
+                            <text x="15" y="45" className="text-xl font-black fill-orange-600">{formatKWh(data.solarGeneration)}</text>
+                        </g>
+                        <g transform={`translate(${meterX + 20}, ${exportY - 80})`}>
+                            <rect width="180" height="55" rx="12" fill="#fff7ed" stroke="#f97316" strokeWidth="3" />
+                            <text x="15" y="18" className="text-[9px] font-black fill-slate-500 uppercase tracking-tighter">E: Exported to Grid</text>
+                            <text x="15" y="42" className="text-lg font-black fill-orange-600">{formatKWh(data.exportedToGrid)}</text>
+                        </g>
+                        <g transform={`translate(${meterX + 20}, ${importY + 20})`}>
+                            <rect width="180" height="55" rx="12" fill="#eff6ff" stroke="#3b82f6" strokeWidth="3" />
+                            <text x="15" y="18" className="text-[9px] font-black fill-slate-500 uppercase tracking-tighter">F: Imported from Grid</text>
+                            <text x="15" y="42" className="text-lg font-black fill-blue-700">{formatKWh(data.importedFromGrid)}</text>
+                        </g>
+
+                        <g transform="translate(30, 595)">
+                            <rect width="940" height="35" rx="8" fill="#1e293b" />
+                            <g transform="translate(40, 22)">
+                                <circle r="5" fill="#f97316" />
+                                <text x="15" y="4" className="text-[9px] font-black uppercase tracking-widest" fill="white">DC Path</text>
+                            </g>
+                            <g transform="translate(200, 22)">
+                                <circle r="5" fill="#22c55e" />
+                                <text x="15" y="4" className="text-[9px] font-black uppercase tracking-widest" fill="white">AC Path</text>
+                            </g>
+                            <g transform="translate(420, 22)">
+                                <circle r="5" fill="#f59e0b" />
+                                <text x="15" y="4" className="text-[9px] font-black uppercase tracking-widest" fill="white">Grid Export</text>
+                            </g>
+                            <g transform="translate(640, 22)">
+                                <circle r="5" fill="#3b82f6" />
+                                <text x="15" y="4" className="text-[9px] font-black uppercase tracking-widest" fill="white">Grid Import</text>
+                            </g>
+                            <g transform="translate(850, 22)">
+                                <text x="0" y="4" className="text-[8px] font-black uppercase tracking-widest fill-blue-400">TECHNICAL ENGINE v7.0</text>
+                            </g>
+                        </g>
+                    </svg>
+                </div>
+            );
+        };
+
+        // --- 4. MAIN APP COMPONENT (from App.tsx) ---
+        const App = () => {
+            const [billAmount, setBillAmount] = React.useState(350);
+            const [afaRate, setAfaRate] = React.useState(0);
+
+            const solarData = React.useMemo(() => computeSolarMetrics(billAmount, afaRate), [billAmount, afaRate]);
+
+            const handleBillChange = (val) => {
+                if (!isNaN(val)) setBillAmount(val);
+            };
+
+            const handleAfaChange = (val) => {
+                if (!isNaN(val)) setAfaRate(val);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-50">
+                    <div className="h-2 bg-blue-600 w-full" />
+                    
+                    <header className="bg-white border-b py-6">
+                        <div className="max-w-6xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-black text-slate-900 tracking-tighter leading-none">ETERNALGY</h1>
+                                    <p className="text-[10px] text-blue-600 font-black tracking-[0.2em] uppercase mt-1">Technical Operating Principle</p>
+                                </div>
+                            </div>
+
+                            {/* Mobile Layout: Recommended & Panels side-by-side, Savings underneath */}
+                            <div className="grid grid-cols-2 md:flex md:flex-row gap-3 w-full md:w-auto">
+                                <div className="bg-indigo-600 px-4 py-3 rounded-xl text-center shadow-md shadow-indigo-100 text-white flex flex-col justify-center min-w-[120px]">
+                                    <p className="text-[9px] font-black text-indigo-100 uppercase tracking-widest opacity-90">Recommended</p>
+                                    <p className="text-lg font-black leading-tight text-white">{solarData.systemSize.toFixed(2)} kWp</p>
+                                </div>
+                                
+                                <div className="bg-orange-600 px-4 py-3 rounded-xl text-center shadow-md shadow-orange-100 text-white flex flex-col justify-center min-w-[100px]">
+                                    <p className="text-[9px] font-black text-orange-100 uppercase tracking-widest opacity-90">Panels</p>
+                                    <p className="text-lg font-black leading-tight">{solarData.panelCount} units</p>
+                                </div>
+
+                                <div className="col-span-2 md:col-span-1 bg-emerald-600 px-6 py-3 rounded-xl text-center shadow-md shadow-emerald-100 text-white flex flex-col justify-center min-w-[180px]">
+                                    <p className="text-[9px] font-black text-emerald-100 uppercase tracking-widest opacity-90">Est. Total Saving</p>
+                                    <p className="text-xl font-black leading-tight">{formatRM(solarData.totalSaving)} /mth</p>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-grow max-w-6xl mx-auto w-full px-4 py-12">
+                        <div className="space-y-10">
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Real-Time Energy Distribution</h2>
+                                <p className="text-slate-500 text-sm font-medium max-w-2xl mx-auto">
+                                    Visualizing the seamless transition between solar generation, internal consumption, and grid interaction. 
+                                    Edit the TNB bill and <span className="text-orange-500 font-bold">AFA Rate</span> in <span className="text-blue-600 font-bold">Box A</span> to simulate scenarios.
+                                </p>
+                            </div>
+
+                            <div className="w-full">
+                                <SolarSchematic 
+                                    data={solarData} 
+                                    onBillChange={handleBillChange} 
+                                    onAfaChange={handleAfaChange}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {[
+                                    { label: 'A: INPUT', desc: 'Monthly Bill & AFA Rate' },
+                                    { label: 'C: SOURCE', desc: 'Raw Solar Generation' },
+                                    { label: 'E: SURPLUS', desc: 'Clean Energy to Grid' },
+                                    { label: 'F: BALANCE', desc: 'Supplement from TNB' }
+                                ].map((item, idx) => (
+                                    <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+                                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.1em] mb-1">{item.label}</span>
+                                        <span className="text-xs font-bold text-slate-600">{item.desc}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </main>
+
+                    <footer className="bg-white border-t py-12">
+                        <div className="max-w-6xl mx-auto px-4 text-center">
+                            <p className="text-xs font-black text-slate-800 tracking-widest uppercase">ETERNALGY SDN BHD (1523087-A)</p>
+                            <p className="text-[10px] text-slate-400 mt-2 font-bold">SOLAR SIMULATOR ENGINE v7.0 • AUTHORIZED DISTRIBUTOR</p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        // --- 5. MOUNTING ---
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
+    </script>
+</body>
+</html>
