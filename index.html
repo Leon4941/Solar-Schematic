@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,13 +250,13 @@
                                     <rect width="100" height="35" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1" rx="4" />
                                     <line x1="10" y1="25" x2="90" y2="25" stroke="#cbd5e1" />
                                     <text x="50" y="55" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">Aircon</text>
-                                    <path d="M100 17 H 280 V 140" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                                    <path d="M280 140 V 17 H 100" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
                                 </g>
                                 <g transform="translate(10, 130)">
                                     <rect width="70" height="50" fill="#1e293b" rx="2" />
                                     <rect x="5" y="5" width="60" height="35" fill="#334155" />
                                     <text x="35" y="65" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">TV</text>
-                                    <path d="M70 25 H 290 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                                    <path d="M280 20 V 25 H 70" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
                                 </g>
                             </g>
                             <g transform="translate(290, 150)">
@@ -287,7 +286,7 @@
                         {isGenerating && <path d={`M${panelsX + 120} ${panelsY + 110} V ${inverterY}`} fill="none" stroke="white" strokeWidth="2" strokeDasharray="8 8" className="animate-flow" />}
                         <g transform={`translate(${panelsX + 130}, ${inverterY - 30})`}>
                             <rect x="0" y="-12" width="25" height="18" rx="4" fill="#f97316" />
-                            <text x="12.5" y="1" textAnchor="middle" className="text-[10px] font-black fill-white">DC</text>
+                            <text x="12.5" y="1" textAnchor="middle" className="text-[10px) font-black fill-white">DC</text>
                         </g>
 
                         <path d={`M${inverterX} ${inverterY + 60} H ${homeDbWallX + 50} V ${dbCenterY} H ${homeDbWallX}`} fill="none" stroke="#22c55e" strokeWidth="6" />
@@ -356,7 +355,7 @@
                             </text>
                             {data.excessSolarExport > 0 && (
                                <text x="15" y="60" className="text-[10px] font-bold fill-red-500">
-                                  (+{formatKWh(data.excessSolarExport)} burned)
+                                  (+{formatKWh(data.excessSolarExport)} Back up)
                                </text>
                             )}
                         </g>
@@ -414,7 +413,7 @@
                             <div className="grid grid-cols-2 md:flex md:flex-row gap-3 w-full md:w-auto">
                                 <div className="bg-indigo-600 px-4 py-3 rounded-xl text-center shadow-md shadow-indigo-100 text-white flex flex-col justify-center min-w-[120px]">
                                     <p className="text-[9px] font-black text-indigo-100 uppercase tracking-widest opacity-90">Recommended</p>
-                                    <p className="text-lg font-black text-white leading-tight">{solarData.systemSize.toFixed(2)} kWp</p>
+                                    <p className="text-lg font-black leading-tight">{solarData.systemSize.toFixed(2)} kWp</p>
                                 </div>
                                 <div className="bg-orange-600 px-4 py-3 rounded-xl text-center shadow-md shadow-orange-100 text-white flex flex-col justify-center min-w-[100px]">
                                     <p className="text-[9px] font-black text-orange-100 uppercase tracking-widest opacity-90">Panels</p>

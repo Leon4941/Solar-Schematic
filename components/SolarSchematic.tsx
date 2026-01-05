@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { SolarData } from '../types';
 import { formatKWh } from '../services/calculations';
@@ -78,13 +77,13 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
               <rect width="100" height="35" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1" rx="4" />
               <line x1="10" y1="25" x2="90" y2="25" stroke="#cbd5e1" />
               <text x="50" y="55" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">Aircon</text>
-              <path d="M100 17 H 280 V 140" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+              <path d="M280 140 V 17 H 100" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
             </g>
             <g transform="translate(10, 130)">
               <rect width="70" height="50" fill="#1e293b" rx="2" />
               <rect x="5" y="5" width="60" height="35" fill="#334155" />
               <text x="35" y="65" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">TV</text>
-              <path d="M70 25 H 290 V 70" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+              <path d="M280 20 V 25 H 70" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
             </g>
           </g>
 
@@ -190,7 +189,7 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
           </text>
           {data.excessSolarExport > 0 && (
              <text x="15" y="60" className="text-[10px] font-bold fill-red-500">
-                (+{formatKWh(data.excessSolarExport)} burned)
+                (+{formatKWh(data.excessSolarExport)} Back up)
              </text>
           )}
         </g>
