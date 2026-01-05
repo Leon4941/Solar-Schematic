@@ -250,13 +250,19 @@
                                     <rect width="100" height="35" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1" rx="4" />
                                     <line x1="10" y1="25" x2="90" y2="25" stroke="#cbd5e1" />
                                     <text x="50" y="55" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">Aircon</text>
-                                    <path d="M280 140 V 17 H 100" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
+                                    {/* Solar Power Flow (Green) */}
+                                    <path d="M276 140 V 12 H 100" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
+                                    {/* Grid Power Flow (Blue) */}
+                                    <path d="M284 140 V 22 H 100" fill="none" stroke="#3b82f6" strokeWidth="4" className="animate-flow" opacity={isImporting ? 1 : 0.2} />
                                 </g>
                                 <g transform="translate(10, 130)">
                                     <rect width="70" height="50" fill="#1e293b" rx="2" />
                                     <rect x="5" y="5" width="60" height="35" fill="#334155" />
                                     <text x="35" y="65" textAnchor="middle" className="text-[10px] font-black fill-slate-500 uppercase">TV</text>
-                                    <path d="M280 20 V 25 H 70" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
+                                    {/* Solar Power Flow (Green) */}
+                                    <path d="M276 20 V 22 H 70" fill="none" stroke="#22c55e" strokeWidth="4" className="animate-flow" />
+                                    {/* Grid Power Flow (Blue) */}
+                                    <path d="M284 20 V 32 H 70" fill="none" stroke="#3b82f6" strokeWidth="4" className="animate-flow" opacity={isImporting ? 1 : 0.2} />
                                 </g>
                             </g>
                             <g transform="translate(290, 150)">
@@ -286,7 +292,7 @@
                         {isGenerating && <path d={`M${panelsX + 120} ${panelsY + 110} V ${inverterY}`} fill="none" stroke="white" strokeWidth="2" strokeDasharray="8 8" className="animate-flow" />}
                         <g transform={`translate(${panelsX + 130}, ${inverterY - 30})`}>
                             <rect x="0" y="-12" width="25" height="18" rx="4" fill="#f97316" />
-                            <text x="12.5" y="1" textAnchor="middle" className="text-[10px) font-black fill-white">DC</text>
+                            <text x="12.5" y="1" textAnchor="middle" className="text-[10px] font-black fill-white">DC</text>
                         </g>
 
                         <path d={`M${inverterX} ${inverterY + 60} H ${homeDbWallX + 50} V ${dbCenterY} H ${homeDbWallX}`} fill="none" stroke="#22c55e" strokeWidth="6" />
