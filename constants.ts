@@ -11,7 +11,7 @@ export const KWTBB_RATE = 0.016; // 1.6%
 
 export const MINIMUM_MONTHLY_CHARGE = 3.00;
 
-export const PANEL_WATTAGE = 620;
+export const PANEL_WATTAGE = 650;
 export const PEAK_SUN_HOURS = 3.4;
 export const MORNING_USAGE_PERCENT = 0.30; // 30% direct consumption
 

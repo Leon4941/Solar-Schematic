@@ -11,6 +11,9 @@ export interface SolarData {
   systemSize: number;
   panelCount: number;
   totalSaving: number; // Added field for estimated monthly savings
+  panelWattage: number;
+  peakSunHours: number;
+  morningUsagePercent: number;
 }
 
 export interface CalculationResult {

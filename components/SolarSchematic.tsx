@@ -6,9 +6,19 @@ interface Props {
   data: SolarData;
   onBillChange: (val: number) => void;
   onAfaChange: (val: number) => void;
+  onPanelWattageChange: (val: number) => void;
+  onPeakSunHoursChange: (val: number) => void;
+  onMorningUsagePercentChange: (val: number) => void;
 }
 
-const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) => {
+const SolarSchematic: React.FC<Props> = ({ 
+  data, 
+  onBillChange, 
+  onAfaChange,
+  onPanelWattageChange,
+  onPeakSunHoursChange,
+  onMorningUsagePercentChange
+}) => {
   const isGenerating = data.solarGeneration > 0;
   const isExporting = data.exportedToGrid > 0;
   const isImporting = data.importedFromGrid > 0;
@@ -68,7 +78,7 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
           
           <g transform="translate(20, 20)">
             <rect width="280" height="60" rx="12" fill="#eff6ff" stroke="#3b82f6" strokeWidth="3" />
-            <text x="15" y="25" className="text-xs font-black fill-slate-500 uppercase tracking-widest">D: Morning Usage (30%)</text>
+            <text x="15" y="25" className="text-xs font-black fill-slate-500 uppercase tracking-widest">D: Morning Usage ({(data.morningUsagePercent * 100).toFixed(0)}%)</text>
             <text x="15" y="48" className="text-xl font-black fill-blue-700">{formatKWh(data.morningUsage)}</text>
           </g>
 
@@ -152,32 +162,15 @@ const SolarSchematic: React.FC<Props> = ({ data, onBillChange, onAfaChange }) =>
           <text x="0" y="240" textAnchor="middle" className="text-[11px] font-black fill-slate-800 uppercase tracking-tighter">TNB GRID</text>
         </g>
 
-        {/* Box A/B: Interactive Input Area */}
-        <foreignObject x="30" y="30" width="240" height="130">
-          <div className="bg-slate-900 p-4 rounded-2xl shadow-xl border-2 border-blue-500">
-            <div className="flex justify-between items-start mb-2">
-              <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest block">A: TNB Bill (MYR)</label>
-              <div className="flex flex-col items-end">
-                 <label className="text-[8px] font-black text-orange-400 uppercase tracking-widest">AFA Rate</label>
-                 <input 
-                   type="number" 
-                   step="0.0001"
-                   value={data.afaRate}
-                   onChange={(e) => onAfaChange(parseFloat(e.target.value) || 0)}
-                   className="bg-transparent text-[11px] font-black text-white w-14 text-right focus:outline-none border-b border-orange-500/40 focus:border-orange-500 transition-colors"
-                 />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
+        {/* Box A/B: Interactive Input Area (Now Display Only) */}
+        <foreignObject x="30" y="30" width="240" height="120">
+          <div className="bg-slate-900 p-5 rounded-2xl shadow-xl border-2 border-blue-500 space-y-2">
+            <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest block">A: TNB Bill (Monthly)</label>
+            <div className="flex items-baseline gap-2">
               <span className="text-xl font-black text-white">RM</span>
-              <input 
-                type="number" 
-                value={data.billAmount}
-                onChange={(e) => onBillChange(parseFloat(e.target.value) || 0)}
-                className="bg-transparent text-3xl font-black text-white w-full focus:outline-none border-b-2 border-blue-500/30 focus:border-blue-500 transition-colors"
-              />
+              <span className="text-4xl font-black text-white">{data.billAmount}</span>
             </div>
-            <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-wider">B: Est. {formatKWh(data.estimatedUsage)} /mo</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">B: Est. {formatKWh(data.estimatedUsage)} /mo</p>
           </div>
         </foreignObject>
 

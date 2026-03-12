@@ -81,15 +81,21 @@ export const calculateKWhFromBill = (targetBill: number, afaRate: number = 0): n
     return mid;
 };
 
-export const computeSolarMetrics = (billAmount: number, afaRate: number = 0): SolarData => {
+export const computeSolarMetrics = (
+  billAmount: number, 
+  afaRate: number = 0,
+  panelWattage: number = PANEL_WATTAGE,
+  peakSunHours: number = PEAK_SUN_HOURS,
+  morningUsagePercent: number = MORNING_USAGE_PERCENT
+): SolarData => {
   const estimatedUsage = calculateKWhFromBill(billAmount, afaRate);
   const originalBill = calculateBill(estimatedUsage, afaRate);
   
-  const monthlyKWhPerPanel = (PANEL_WATTAGE * PEAK_SUN_HOURS * 30) / 1000;
+  const monthlyKWhPerPanel = (panelWattage * peakSunHours * 30) / 1000;
   const panelCount = Math.max(0, Math.ceil(estimatedUsage / monthlyKWhPerPanel));
   const solarGeneration = panelCount * monthlyKWhPerPanel;
   
-  const morningUsage = estimatedUsage * MORNING_USAGE_PERCENT;
+  const morningUsage = estimatedUsage * morningUsagePercent;
   const rawSolarExport = Math.max(0, solarGeneration - morningUsage);
   const nightUsage = Math.max(0, estimatedUsage - morningUsage);
   
@@ -124,9 +130,12 @@ export const computeSolarMetrics = (billAmount: number, afaRate: number = 0): So
     exportedToGrid: effectiveExport,
     excessSolarExport,
     importedFromGrid: nightUsage,
-    systemSize: (panelCount * PANEL_WATTAGE) / 1000,
+    systemSize: (panelCount * panelWattage) / 1000,
     panelCount,
-    totalSaving
+    totalSaving,
+    panelWattage,
+    peakSunHours,
+    morningUsagePercent
   };
 };
 

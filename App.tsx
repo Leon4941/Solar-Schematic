@@ -2,12 +2,19 @@
 import React, { useState, useMemo } from 'react';
 import SolarSchematic from './components/SolarSchematic';
 import { computeSolarMetrics, formatCurrency } from './services/calculations';
+import { PANEL_WATTAGE, PEAK_SUN_HOURS, MORNING_USAGE_PERCENT } from './constants';
 
 const App: React.FC = () => {
   const [billAmount, setBillAmount] = useState<number>(350);
   const [afaRate, setAfaRate] = useState<number>(0);
+  const [panelWattage, setPanelWattage] = useState<number>(PANEL_WATTAGE);
+  const [peakSunHours, setPeakSunHours] = useState<number>(PEAK_SUN_HOURS);
+  const [morningUsagePercent, setMorningUsagePercent] = useState<number>(MORNING_USAGE_PERCENT);
 
-  const solarData = useMemo(() => computeSolarMetrics(billAmount, afaRate), [billAmount, afaRate]);
+  const solarData = useMemo(() => 
+    computeSolarMetrics(billAmount, afaRate, panelWattage, peakSunHours, morningUsagePercent), 
+    [billAmount, afaRate, panelWattage, peakSunHours, morningUsagePercent]
+  );
 
   const handleBillChange = (val: number) => {
     if (!isNaN(val)) {
@@ -18,6 +25,24 @@ const App: React.FC = () => {
   const handleAfaChange = (val: number) => {
     if (!isNaN(val)) {
       setAfaRate(val);
+    }
+  };
+
+  const handlePanelWattageChange = (val: number) => {
+    if (!isNaN(val)) {
+      setPanelWattage(val);
+    }
+  };
+
+  const handlePeakSunHoursChange = (val: number) => {
+    if (!isNaN(val)) {
+      setPeakSunHours(val);
+    }
+  };
+
+  const handleMorningUsagePercentChange = (val: number) => {
+    if (!isNaN(val)) {
+      setMorningUsagePercent(val);
     }
   };
 
@@ -63,8 +88,78 @@ const App: React.FC = () => {
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Real-Time Energy Distribution</h2>
             <p className="text-slate-500 text-sm font-medium max-w-2xl mx-auto">
               Visualizing the seamless transition between solar generation, internal consumption, and grid interaction. 
-              Edit the TNB bill and <span className="text-orange-500 font-bold">AFA Rate</span> in <span className="text-blue-600 font-bold">Box A</span> to simulate scenarios.
             </p>
+          </div>
+
+          {/* New Configuration Section */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">TNB Bill (Monthly)</label>
+                <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="font-bold text-slate-400">RM</span>
+                  <input 
+                    type="number" 
+                    value={billAmount}
+                    onChange={(e) => handleBillChange(parseFloat(e.target.value) || 0)}
+                    className="bg-transparent font-black text-xl text-slate-900 w-full focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-rose-600 uppercase tracking-widest">AFA Rate</label>
+                <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <input 
+                    type="number" 
+                    step="0.0001"
+                    value={afaRate}
+                    onChange={(e) => handleAfaChange(parseFloat(e.target.value) || 0)}
+                    className="bg-transparent font-black text-xl text-slate-900 w-full focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Panel Wattage (W)</label>
+                <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <input 
+                    type="number" 
+                    value={panelWattage}
+                    onChange={(e) => handlePanelWattageChange(parseFloat(e.target.value) || 0)}
+                    className="bg-transparent font-black text-xl text-slate-900 w-full focus:outline-none"
+                  />
+                  <span className="font-bold text-slate-400">W</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Peak Sun Hours</label>
+                <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={peakSunHours}
+                    onChange={(e) => handlePeakSunHoursChange(parseFloat(e.target.value) || 0)}
+                    className="bg-transparent font-black text-xl text-slate-900 w-full focus:outline-none"
+                  />
+                  <span className="font-bold text-slate-400">Hrs</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Morning Usage (%)</label>
+                <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <input 
+                    type="number" 
+                    value={morningUsagePercent * 100}
+                    onChange={(e) => handleMorningUsagePercentChange((parseFloat(e.target.value) || 0) / 100)}
+                    className="bg-transparent font-black text-xl text-slate-900 w-full focus:outline-none"
+                  />
+                  <span className="font-bold text-slate-400">%</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="w-full">
@@ -72,6 +167,9 @@ const App: React.FC = () => {
               data={solarData} 
               onBillChange={handleBillChange} 
               onAfaChange={handleAfaChange}
+              onPanelWattageChange={handlePanelWattageChange}
+              onPeakSunHoursChange={handlePeakSunHoursChange}
+              onMorningUsagePercentChange={handleMorningUsagePercentChange}
             />
           </div>
 
